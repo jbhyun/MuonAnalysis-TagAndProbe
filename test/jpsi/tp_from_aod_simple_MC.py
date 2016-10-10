@@ -5,12 +5,12 @@ process = cms.Process("TagProbe")
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
+process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
-process.source = cms.Source("PoolSource", 
+process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(),
 )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )    
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
@@ -50,16 +50,17 @@ elif "CMSSW_7_6_" in os.environ['CMSSW_VERSION']:
 elif "CMSSW_8_0_" in os.environ['CMSSW_VERSION']:
     process.GlobalTag.globaltag = cms.string('80X_mcRun2_asymptotic_2016_v3')
     process.source.fileNames = [
-        '/store/mc/RunIISpring16DR80/JpsiToMuMu_JpsiPt8_TuneCUEP8M1_13TeV-pythia8/AODSIM/PUSpring16_80X_mcRun2_asymptotic_2016_v3-v1/70000/DE3ACB51-BC16-E611-BDF3-001E67505815.root',
-        '/store/mc/RunIISpring16DR80/JpsiToMuMu_JpsiPt8_TuneCUEP8M1_13TeV-pythia8/AODSIM/PUSpring16_80X_mcRun2_asymptotic_2016_v3-v1/70000/FC820F64-7316-E611-8FF3-02163E0141AD.root'
+        'file:/tmp/hbrun/theJPSIfile.root'
+        #'/store/mc/RunIISpring16DR80/JpsiToMuMu_JpsiPt8_TuneCUEP8M1_13TeV-pythia8/AODSIM/PUSpring16_80X_mcRun2_asymptotic_2016_v3-v1/70000/DE3ACB51-BC16-E611-BDF3-001E67505815.root',
+        #'/store/mc/RunIISpring16DR80/JpsiToMuMu_JpsiPt8_TuneCUEP8M1_13TeV-pythia8/AODSIM/PUSpring16_80X_mcRun2_asymptotic_2016_v3-v1/70000/FC820F64-7316-E611-8FF3-02163E0141AD.root'
     ]
-    
+
 else: raise RuntimeError, "Unknown CMSSW version %s" % os.environ['CMSSW_VERSION']
 
 ## SELECT WHAT DATASET YOU'RE RUNNING ON
 #TRIGGER="SingleMu"
 TRIGGER="Any"
-
+LEGACYTRIGGER=True #not read the stage2 l1 info in case MC with legacy trigger is used
 ## ==== Fast Filters ====
 process.goodVertexFilter = cms.EDFilter("VertexSelector",
     src = cms.InputTag("offlinePrimaryVertices"),
@@ -83,18 +84,18 @@ process.triggerResultsFilter.hltResults = cms.InputTag( "TriggerResults", "", "H
 process.HLTMu   = process.triggerResultsFilter.clone(triggerConditions = [ 'HLT_Mu*_L2Mu*' ])
 process.HLTBoth = process.triggerResultsFilter.clone(triggerConditions = [ 'HLT_Mu*_L2Mu*', 'HLT_Mu*_Track*_Jpsi*' ])
 
-##    __  __                       
-##   |  \/  |_   _  ___  _ __  ___ 
+##    __  __
+##   |  \/  |_   _  ___  _ __  ___
 ##   | |\/| | | | |/ _ \| '_ \/ __|
 ##   | |  | | |_| | (_) | | | \__ \
 ##   |_|  |_|\__,_|\___/|_| |_|___/
-##                                 
+##
 ## ==== Merge CaloMuons and Tracks into the collection of reco::Muons  ====
 from RecoMuon.MuonIdentification.calomuons_cfi import calomuons;
 process.mergedMuons = cms.EDProducer("CaloMuonMerger",
     mergeTracks = cms.bool(True),
     mergeCaloMuons = cms.bool(False), # AOD
-    muons     = cms.InputTag("muons"), 
+    muons     = cms.InputTag("muons"),
     caloMuons = cms.InputTag("calomuons"),
     tracks    = cms.InputTag("generalTracks"),
     minCaloCompatibility = calomuons.minCaloCompatibility,
@@ -156,6 +157,13 @@ process.probeMuonsMCMatch = process.tagMuonsMCMatch.clone(src = "probeMuons")
 
 from MuonAnalysis.TagAndProbe.muon.tag_probe_muon_extraIso_cff import ExtraIsolationVariables
 
+if LEGACYTRIGGER:
+    AllVariablesNoL1 = cms.PSet()
+    for K,F in AllVariables.parameters_().iteritems():
+        if not "l1" in K:
+            setattr(AllVariablesNoL1, K, F)
+    AllVariables=AllVariablesNoL1
+
 process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
     # choice of tag and probe pairs, and arbitration
     tagProbePairs = cms.InputTag("tpPairs"),
@@ -204,6 +212,7 @@ process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
         drVtx         = cms.InputTag("tagProbeSeparation", "drVtx"),
         dz            = cms.string("daughter(0).vz - daughter(1).vz"),
         probeMultiplicity = cms.InputTag("probeMultiplicity"),
+        probeMultiplicityBiasedProbe = cms.InputTag("probeMultiplicityBiasedProbe"),
     ),
     pairFlags = cms.PSet(),
     isMC           = cms.bool(True),
@@ -232,14 +241,14 @@ process.tnpSimpleSequence = cms.Sequence(
     process.muonDxyPVdzmin +
     process.nverticesModule +
     process.tagProbeSeparation +
-    process.computeCorrectedIso + 
-    process.probeMultiplicity + 
+    process.computeCorrectedIso +
+    process.probeMultiplicity + process.probeMultiplicityBiasedProbe +
     process.splitTrackTagger +
     process.l1rate +
     process.tpTree
 )
 
-process.tagAndProbe = cms.Path( 
+process.tagAndProbe = cms.Path(
     process.fastFilter +
     process.HLTBoth    +
     process.mergedMuons                 *
@@ -247,12 +256,12 @@ process.tagAndProbe = cms.Path(
     process.tnpSimpleSequence
 )
 
-##    _____               _    _             
-##   |_   _| __ __ _  ___| | _(_)_ __   __ _ 
+##    _____               _    _
+##   |_   _| __ __ _  ___| | _(_)_ __   __ _
 ##     | || '__/ _` |/ __| |/ / | '_ \ / _` |
 ##     | || | | (_| | (__|   <| | | | | (_| |
 ##     |_||_|  \__,_|\___|_|\_\_|_| |_|\__, |
-##                                     |___/ 
+##                                     |___/
 
 ## Then make another collection for standalone muons, using standalone track to define the 4-momentum
 process.muonsSta = cms.EDProducer("RedefineMuonP4FromTrack",
@@ -269,7 +278,7 @@ massSearchReplaceAnyInputTag(process.patMuonsWithTriggerSequenceSta, "mergedMuon
 ## Define probes and T&P pairs
 process.probeMuonsSta = cms.EDFilter("PATMuonSelector",
     src = cms.InputTag("patMuonsWithTriggerSta"),
-    cut = cms.string("outerTrack.isNonnull && !triggerObjectMatchesByCollection('hltL2MuonCandidates').empty()"), 
+    cut = cms.string("outerTrack.isNonnull && !triggerObjectMatchesByCollection('hltL2MuonCandidates').empty()"),
 )
 process.probeMuonsMCMatchSta = process.tagMuonsMCMatch.clone(src = "probeMuonsSta")
 
@@ -280,7 +289,7 @@ process.onePairSta = cms.EDFilter("CandViewCountFilter", src = cms.InputTag("tpP
 process.tpTreeSta = process.tpTree.clone(
     tagProbePairs = "tpPairsSta",
     variables = cms.PSet(
-        KinematicVariables, 
+        KinematicVariables,
         ## track matching variables
         tk_deltaR     = cms.InputTag("staToTkMatch","deltaR"),
         tk_deltaEta   = cms.InputTag("staToTkMatch","deltaEta"),
@@ -360,7 +369,7 @@ if True: # turn on for tracking efficiency from RECO/AOD + earlyGeneralTracks
     process.tpTreeSta.variables.tk0_deltaR_NoBestJPsi   = cms.InputTag("staToTkMatchNoBestJPsi0","deltaR")
     process.tpTreeSta.variables.tk0_deltaEta_NoBestJPsi = cms.InputTag("staToTkMatchNoBestJPsi0","deltaEta")
 
-process.tagAndProbeSta = cms.Path( 
+process.tagAndProbeSta = cms.Path(
     process.fastFilter +
     process.HLTBoth      +
     process.muonsSta                       +
@@ -427,11 +436,11 @@ if True: # turn on for tracking efficiency using gen particles as probe
     )
     process.tagAndProbeTkGen = cms.Path(
         process.fastFilter +
-        process.HLTMu + 
+        process.HLTMu +
         process.probeGen +
         process.tpPairsTkGen +
         process.preTkMatchSequenceJPsi +
-        process.genToTkMatch + process.genToTkMatchNoJPsi + process.genToTkMatchNoBestJPsi + 
+        process.genToTkMatch + process.genToTkMatchNoJPsi + process.genToTkMatchNoBestJPsi +
         process.genToTkMatch0 + process.genToTkMatchNoJPsi0 + process.genToTkMatchNoBestJPsi0 +
         process.probeMuonsMCMatchGen +
         process.nverticesModule +
@@ -493,26 +502,26 @@ if True: # turn on for tracking efficiency using L1 seeds
     )
     process.tagAndProbeTkL1 = cms.Path(
         process.fastFilter +
-        process.HLTMu + 
+        process.HLTMu +
         process.probeL1 +
         process.tpPairsTkL1 +
         process.preTkMatchSequenceJPsi +
-        process.l1ToTkMatch + 
+        process.l1ToTkMatch +
         process.l1ToTkMatchNoJPsi + process.l1ToTkMatchNoBestJPsi +
-        process.l1ToTkMatch0 + 
+        process.l1ToTkMatch0 +
         process.l1ToTkMatchNoJPsi0 + process.l1ToTkMatchNoBestJPsi0 +
         process.probeMuonsMCMatchL1 +
         process.nverticesModule +
         process.tpTreeL1
     )
 
-##    _____     _          ____       _            
-##   |  ___|_ _| | _____  |  _ \ __ _| |_ ___  ___ 
+##    _____     _          ____       _
+##   |  ___|_ _| | _____  |  _ \ __ _| |_ ___  ___
 ##   | |_ / _` | |/ / _ \ | |_) / _` | __/ _ \/ __|
 ##   |  _| (_| |   <  __/ |  _ < (_| | ||  __/\__ \
 ##   |_|  \__,_|_|\_\___| |_| \_\__,_|\__\___||___/
-##                                                 
-##   
+##
+##
 #process.load("MuonAnalysis.TagAndProbe.fakerate_all_cff")
 #
 #process.fakeRateJetPlusProbeTree = process.tpTree.clone(
@@ -577,7 +586,7 @@ process.schedule = cms.Schedule(
 
 process.TFileService = cms.Service("TFileService", fileName = cms.string("tnpJPsi_MC.root"))
 
-# use this if you want to compute also 'unbiased' efficiencies, 
+# use this if you want to compute also 'unbiased' efficiencies,
 # - you have to remove all filters
 # - you have to remove trigger requirements on the probes (but you can add a flag for them in the tree)
 # note that it will be *much* slower and make a *much* bigger output tree!
@@ -597,7 +606,7 @@ if True:
     process.tpTreeSta.makeMCUnbiasTree = True
 
 
-if True: # enable and do cmsRun tp_from_aod_MC.py /eos/path/to/run/on [ extra_postfix ] to run on all files in that eos path 
+if True: # enable and do cmsRun tp_from_aod_MC.py /eos/path/to/run/on [ extra_postfix ] to run on all files in that eos path
     import sys
     args = sys.argv[1:]
     if (sys.argv[0] == "cmsRun"): args = sys.argv[2:]
