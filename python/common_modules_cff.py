@@ -8,16 +8,16 @@ from JetMETCorrections.Configuration.JetCorrectors_cff import ak4PFCHSL3Absolute
 ##        Object counting modules                                                      ##
 #########################################################################################
 
-nverticesModule = cms.EDProducer("VertexMultiplicityCounter", 
+nverticesModule = cms.EDProducer("VertexMultiplicityCounter",
     probes = cms.InputTag("tagMuons"),
     objects = cms.InputTag("offlinePrimaryVertices"),
     objectSelection = cms.string("!isFake && ndof > 4 && abs(z) <= 25 && position.Rho <= 2"),
 )
 
-njets30Module = cms.EDProducer("CandCleanedMultiplicityCounter", 
+njets30Module = cms.EDProducer("CandCleanedMultiplicityCounter",
     pairs   = cms.InputTag("tpPairs"),
     objects = cms.InputTag("ak4PFJetsCHS"),
-    objectSelection = cms.string("abs(eta) < 5 && pt > 30"), 
+    objectSelection = cms.string("abs(eta) < 5 && pt > 30"),
     minTagObjDR   = cms.double(0.3),
     minProbeObjDR = cms.double(0.3),
 )
@@ -28,11 +28,11 @@ njets30Module = cms.EDProducer("CandCleanedMultiplicityCounter",
 
 ## Now I have to define the passing probes for tracking
 ## first remove low pt tracks which will not make muons anyway
-pCutTracks = cms.EDFilter("TrackSelector", 
-    src = cms.InputTag("generalTracks"),      
+pCutTracks = cms.EDFilter("TrackSelector",
+    src = cms.InputTag("generalTracks"),
     cut = cms.string("pt > 2 || (abs(eta) > 1 && p > 2)"),
 )
-tkTracks = cms.EDProducer("ConcreteChargedCandidateProducer", 
+tkTracks = cms.EDProducer("ConcreteChargedCandidateProducer",
     src = cms.InputTag("pCutTracks"),
     particleType = cms.string("mu+"),
 )
@@ -62,11 +62,11 @@ tkTracksNoZ = cms.EDProducer("CandidateResonanceInefficiencyCreator",
 
 staToTkMatch = cms.EDProducer("MatcherUsingTracksWithTagAssoc",
     src     = cms.InputTag("probeMuonsSta"),
-    matched = cms.InputTag("tkTracks"),  
+    matched = cms.InputTag("tkTracks"),
     tags      = cms.InputTag("tagMuons"),
     tagDeltaZ = cms.double(1.0),
-    algorithm = cms.string("byDirectComparison"), 
-    srcTrack     = cms.string("muon"),    srcState = cms.string("atVertex"), 
+    algorithm = cms.string("byDirectComparison"),
+    srcTrack     = cms.string("muon"),    srcState = cms.string("atVertex"),
     matchedTrack = cms.string("tracker"), matchedState = cms.string("atVertex"),
     maxDeltaR        = cms.double(1.),   # large range in DR (we can tighten it later)
     maxDeltaEta      = cms.double(0.4),  # small in eta, which is more precise
@@ -81,12 +81,12 @@ staToTkMatchNoZ = staToTkMatch.clone(matched = 'tkTracksNoZ')
 
 preTkMatchSequenceJPsi = cms.Sequence( pCutTracks + tkTracks + tkTracksNoJPsi + tkTracksNoBestJPsi )
 staToTkMatchSequenceJPsi = cms.Sequence(
-    preTkMatchSequenceJPsi * staToTkMatch * staToTkMatchNoJPsi * staToTkMatchNoBestJPsi     
+    preTkMatchSequenceJPsi * staToTkMatch * staToTkMatchNoJPsi * staToTkMatchNoBestJPsi
 )
 
 preTkMatchSequenceZ = cms.Sequence( pCutTracks + tkTracks + tkTracksNoZ )
 staToTkMatchSequenceZ = cms.Sequence(
-    preTkMatchSequenceZ * staToTkMatch * staToTkMatchNoZ     
+    preTkMatchSequenceZ * staToTkMatch * staToTkMatchNoZ
 )
 
 #########################################################################################
@@ -96,7 +96,7 @@ staToTkMatchSequenceZ = cms.Sequence(
 import RecoMuon.MuonIsolationProducers.muIsoDepositTk_cfi
 probeMuonsIsoDepositTk = RecoMuon.MuonIsolationProducers.muIsoDepositTk_cfi.muIsoDepositTk.clone()
 probeMuonsIsoDepositTk.IOPSet.inputMuonCollection = 'probeMuons'
-probeMuonsIsoFromDepsTk = cms.EDProducer("CandIsolatorFromDeposits", 
+probeMuonsIsoFromDepsTk = cms.EDProducer("CandIsolatorFromDeposits",
     deposits = cms.VPSet( cms.PSet(
         src = cms.InputTag("probeMuonsIsoDepositTk"),
         mode = cms.string('sum'),
@@ -114,8 +114,8 @@ probeMuonsIsoValueMaps = cms.EDProducer("AnyNumbersToValueMaps",
     associations = cms.VInputTag(cms.InputTag("probeMuonsIsoFromDepsTk"), cms.InputTag("probeMuonsRelIsoFromDepsTk")),
 )
 probeMuonsIsoSequence = cms.Sequence(
-    ( probeMuonsIsoDepositTk * 
-      ( probeMuonsIsoFromDepsTk + probeMuonsRelIsoFromDepsTk) 
+    ( probeMuonsIsoDepositTk *
+      ( probeMuonsIsoFromDepsTk + probeMuonsRelIsoFromDepsTk)
       ) * probeMuonsIsoValueMaps
 )
 
@@ -192,6 +192,11 @@ probeMultiplicity = cms.EDProducer("ProbeMulteplicityProducer",
    #pairCut  = cms.string(""),  # count only probes whose pairs satisfy this cut
    #probeCut = cms.string(""),  # count only probes satisfying this cut
 )
+probeMultiplicityBiasedProbe = cms.EDProducer("ProbeMulteplicityProducer",
+    pairs = cms.InputTag("tpPairs"),
+   #pairCut  = cms.string(""),  # count only probes whose pairs satisfy this cut
+   probeCut = cms.string("track.isNonnull && (!triggerObjectMatchesByCollection('hltTracksIter').empty() || !triggerObjectMatchesByCollection('hltMuTrackJpsiEffCtfTrackCands').empty() || !triggerObjectMatchesByCollection('hltMuTrackJpsiCtfTrackCands').empty() || !triggerObjectMatchesByCollection('hltL2MuonCandidates').empty())"),  # count only probes satisfying this cut
+)
 probeMultiplicityTMGM = cms.EDProducer("ProbeMulteplicityProducer",
    pairs = cms.InputTag("tpPairs"),
    #pairCut  = cms.string(""),  # count only probes whose pairs satisfy this cut
@@ -214,7 +219,7 @@ splitTrackTagger = cms.EDProducer("NearbyCandCountComputer",
     probes = cms.InputTag("probeMuons"),
     objects = cms.InputTag("probeMuons"),
     deltaR  = cms.double(0.03),
-    pairSelection = cms.string("mu1.charge == mu2.charge && "+ 
+    pairSelection = cms.string("mu1.charge == mu2.charge && "+
                                "abs(mu1.vz - mu2.vz) - 3*hypot(mu1.track.dzError,mu2.track.dzError) < 1 && "+
                                "abs(mu1.track.hitPattern.numberOfValidPixelHits - mu2.track.hitPattern.numberOfValidPixelHits) >= 2 && "+
                                "abs(mu1.track.hitPattern.numberOfLostHits('MISSING_OUTER_HITS') - mu2.track.hitPattern.numberOfLostHits('MISSING_OUTER_HITS')) >= 2 && "+
@@ -252,8 +257,8 @@ goodGenMuons = cms.EDFilter("GenParticleSelector",
     cut = cms.string("abs(pdgId) == 13 && pt > 3 && abs(eta) < 2.4 && status == 1 && isPromptFinalState")
 )
 
-############## 
-## MET & MT 
+##############
+## MET & MT
 #############
 tagMetMt = cms.EDProducer("MuonMetMT",
     probes = cms.InputTag("tagMuons"),
