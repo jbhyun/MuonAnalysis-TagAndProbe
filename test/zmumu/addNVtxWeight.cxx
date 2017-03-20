@@ -45,7 +45,11 @@ void addNVtxWeight(TString treeName="tpTree", TString cut = "") { //, TString cu
     TFile *fOut = new TFile("tnpZ_withNVtxWeights.root", "RECREATE");
     fOut->mkdir("tpTree")->cd();
     TTree *tOut = tMC.CloneTree(0);
+
     tOut->Branch("weight", &weight, "weight/F");
+    //tOut->Branch("weight_BtoF", &weight, "weight_BtoF/F");
+    //tOut->Branch("weight_GtoH", &weight, "weight_GtoH/F");
+
     int step = tMC.GetEntries()/100;
     double evDenom = 100.0/double(tMC.GetEntries());
     TStopwatch timer; timer.Start();
