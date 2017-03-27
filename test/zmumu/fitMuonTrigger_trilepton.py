@@ -96,8 +96,8 @@ process.TnP_Muon_Trigger = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
     ## PDF for signal and background (double voigtian + exponential background)
     PDFs = cms.PSet(
         vpvPlusExpo = cms.vstring(
-            "Voigtian::signal1(mass, mean1[90,80,100], width[2.495], sigma1[2,1,3])",
-            "Voigtian::signal2(mass, mean2[90,80,100], width,        sigma2[4,2,10])",
+            "Voigtian::signal1(mass, mean1[90,80,150], width[2.495], sigma1[2,1,3])",
+            "Voigtian::signal2(mass, mean2[90,80,150], width,        sigma2[4,2,10])",
             "SUM::signal(vFrac[0.8,0,1]*signal1, signal2)",
             "Exponential::backgroundPass(mass, lp[-0.1,-1,0.1])",
             "Exponential::backgroundFail(mass, lf[-0.1,-1,0.1])",
@@ -149,6 +149,18 @@ process.TnP_Muon_Trigger = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
             "efficiency[0.9,0.7,1]",
             "signalFractionInPassing[0.9]"
         ),
+        vpvPlusExpo3 = cms.vstring(
+            "Voigtian::signalPass1(mass, meanPass1[91.1,80.1,150.1], width[2.495], sigmaPass1[2.5,1,6])",
+            "Voigtian::signalPass2(mass, meanPass2[91.1,80.1,150.1], width,        sigmaPass2[5,1,10])",
+            "SUM::signalPass(vFracPass[0.8,0,1]*signalPass1, signalPass2)",
+            "Voigtian::signalFail1(mass, meanFail1[91.1,80.1,150.1], width[2.495], sigmaFail1[2.5,1,6])",
+            "Voigtian::signalFail2(mass, meanFail2[91.1,80.1,150.1], width,        sigmaFail2[5,1,10])",
+            "SUM::signalFail(vFracFail[0.8,0,1]*signalFail1, signalFail2)",
+            "Exponential::backgroundPass(mass, lp[-0.1,-1,0.1])",
+            "Exponential::backgroundFail(mass, lf[-0.1,-1,0.1])",
+            "efficiency[0.9,0,1]",
+            "signalFractionInPassing[0.9]"
+        ),
 
     ),
     ## How to do the fit
@@ -161,23 +173,108 @@ process.TnP_Muon_Trigger = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
 
 if "MC" in infile:
   print "This is MC"
-  if Period=="BCDEF" in infile:
+  if Period=="BCDEF":
     print "  reweighting w.r.t BCDEF"
-    process.TnP_Muon_Trigger.Variables.weight = cms.vstring("weight_BtoF","-10000","10000","")
+    process.TnP_Muon_Trigger.Variables.weight_BtoF = cms.vstring("weight_BtoF","-10000","10000","")
     process.TnP_Muon_Trigger.WeightVariable = cms.string("weight_BtoF")
-  if Period=="GH" in infile:
+    process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.UnbinnedVariables = cms.vstring("mass", "weight_BtoF")
+  if Period=="GH":
     print "  reweighting w.r.t GH"
-    process.TnP_Muon_Trigger.Variables.weight = cms.vstring("weight_GtoH","-10000","10000","")
+    process.TnP_Muon_Trigger.Variables.weight_GtoH = cms.vstring("weight_GtoH","-10000","10000","")
     process.TnP_Muon_Trigger.WeightVariable = cms.string("weight_GtoH")
+    process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.UnbinnedVariables = cms.vstring("mass", "weight_GtoH")
 
 if Period=="BCDEF":
   print "BCDEF period => applying dPhi cut"
   process.TnP_Muon_Trigger.Variables.pair_dPhiPrimeDeg = cms.vstring("#delta#phi(tag, probe)", "0", "9999", "")
   process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinnedVariables.pair_dPhiPrimeDeg = cms.vdouble( 70, 9999 )
 
+#######################################################
+#
+#
 if PassingProbeTrigger=="DoubleIsoMu17Mu8_IsoMu17leg":
   process.TnP_Muon_Trigger.Categories.DoubleIsoMu17Mu8_IsoMu17leg = cms.vstring("DoubleIsoMu17Mu8_IsoMu17leg", "dummy[pass=1,fail=0]")
   process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.EfficiencyCategoryAndState = cms.vstring("DoubleIsoMu17Mu8_IsoMu17leg", "pass") 
+  process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinnedVariables.pt = cms.vdouble(10, 15, 16, 17, 18, 19, 20, 25, 30, 40, 50, 60, 120)
+
+  if Period=="BCDEF":
+    if "MC" in infile:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusCheb_3rd",
+        "*abseta_bin*pt_bin10*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin11*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin10*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin11*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin11*", "vpvPlusCheb_3rd",
+      )
+    else:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin1_*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin2*", "vpvPlusCheb_3rd",
+        "*abseta_bin1*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin2*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin11*", "vpvPlusExpo3",
+      )
+  if Period=="GH":
+    if "MC" in infile:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin3*", "vpvPlusExpo",
+        "*abseta_bin*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin11*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin11*", "vpvPlusCheb_3rd",
+        "*abseta_bin2*pt_bin10*", "vpvPlusCheb_3rd",
+        "*abseta_bin2*pt_bin11*", "vpvPlusCheb_4th",
+        "*abseta_bin3*pt_bin10*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin11*", "vpvPlusExpo3",
+      )
+    else:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin1_*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin2*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin10*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin10*", "vpvPlusCheb_3rd",
+        "*abseta_bin3*pt_bin11*", "vpvPlusExpo3",
+      )
+
+#
+#
+#######################################################
+
+
+
 
 if PassingProbeTrigger=="DoubleIsoMu17Mu8_IsoMu8leg":
   process.TnP_Muon_Trigger.Categories.DoubleIsoMu17Mu8_IsoMu8leg = cms.vstring("DoubleIsoMu17Mu8_IsoMu8leg", "dummy[pass=1,fail=0]")
@@ -191,6 +288,14 @@ if PassingProbeTrigger=="DoubleIsoMu17TkMu8_IsoMu8leg":
   process.TnP_Muon_Trigger.Categories.DoubleIsoMu17TkMu8_IsoMu8leg = cms.vstring("DoubleIsoMu17TkMu8_IsoMu8leg", "dummy[pass=1,fail=0]")
   process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.EfficiencyCategoryAndState = cms.vstring("DoubleIsoMu17TkMu8_IsoMu8leg", "pass")
 
+
+
+
+
+
+#######################################################
+#
+#
 if PassingProbeTrigger=="Mu8_OR_TkMu8":
   process.TnP_Muon_Trigger.Categories = cms.PSet(
     DoubleIsoMu17Mu8_IsoMu8leg   = cms.vstring("DoubleIsoMu17Mu8_IsoMu8leg", "dummy[pass=1,fail=0]"),
@@ -201,6 +306,61 @@ if PassingProbeTrigger=="Mu8_OR_TkMu8":
   )
   process.TnP_Muon_Trigger.Cuts.Mu8_OR_TkMu8 = cms.vstring("Mu8_OR_TkMu8", "Exp_Mu8_OR_TkMu8", "0.5")
   process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.EfficiencyCategoryAndState = cms.vstring("Mu8_OR_TkMu8", "above")
+
+  if Period=="BCDEF":
+    if "MC" in infile:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin1*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin6*", "vpvPlusCheb_3rd",
+      )
+    else:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin1*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin6*", "vpvPlusExpo3",
+      )
+  if Period=="GH":
+    if "MC" in infile:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin0*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin4*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin2*pt_bin6*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin1*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin6*", "vpvPlusCheb_3rd",
+      )
+    else:
+      process.TnP_Muon_Trigger.Efficiencies.HN_TRI_TIGHT_Trigger_pt_eta.BinToPDFmap = cms.vstring(
+        "vpvPlusExpo",
+        "*abseta_bin0*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin0*", "vpvPlusExpo3",
+        "*abseta_bin1*pt_bin1*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin3*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin5*", "vpvPlusExpo3",
+        "*abseta_bin3*pt_bin6*", "vpvPlusExpo3",
+      )
+#
+#
+#########################################################
 
 
 if PassingProbeTrigger=="test1":
