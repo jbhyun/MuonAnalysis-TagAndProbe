@@ -42,7 +42,8 @@ process.TnP_Muon_Trigger = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
         tag_abseta = cms.vstring("tag muon |#eta|", "0.", "2.5", ""),
         abseta = cms.vstring("probe muon |#eta|", "0.", "2.5", ""),
         pair_deltaR = cms.vstring("pair_deltaR", "0", "999", ""),
-        tag_pt = cms.vstring("tag_pt", "0", "99999", "GeV/c"),
+        #tag_pt = cms.vstring("tag_pt", "0", "99999", "GeV/c"),
+        #pt     = cms.vstring("muon p_{T}", "0", "1000", "GeV/c"),
     ),
 
     ## Flags you want to use to define numerator and possibly denominator
@@ -60,16 +61,18 @@ process.TnP_Muon_Trigger = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
         HN_TRI_TIGHT_TriggerDZFilter_tag_eta_eta = cms.PSet(
             UnbinnedVariables = cms.vstring("mass"),
             EfficiencyCategoryAndState = cms.vstring(
-              "PassDZTrigger", "pass",
+                "PassDZTrigger", "pass",
             ), ## Numerator definition
             BinnedVariables = cms.PSet(
                 ## Binning in continuous variables
-                #tag_eta = cms.vdouble(-2.4, -2.0, -1.5, -1.0, -0.5, 0., 0.5, 1.0, 1.5, 2.0, 2.4),
-                #eta = cms.vdouble(-2.4, -2.0, -1.5, -1.0, -0.5, 0., 0.5, 1.0, 1.5, 2.0, 2.4),
                 tag_abseta = cms.vdouble(0., 0.9, 1.2, 2.1, 2.4),
-                abseta = cms.vdouble(0., 0.9, 1.2, 2.1, 2.4),
+                abseta     = cms.vdouble(0., 0.9, 1.2, 2.1, 2.4),
+                #tag_abseta = cms.vdouble(0., 0.9, 2.4),
+                #abseta     = cms.vdouble(0., 0.9, 2.4),
+                #pt = cms.vdouble(10, 20, 25, 30, 40, 50, 60, 120),
+                #abseta = cms.vdouble(0., 0.9, 1.2, 2.1, 2.4),
                 pair_deltaR = cms.vdouble(0.3, 999),
-                tag_pt = cms.vdouble(19.9999,99999),
+                #tag_pt = cms.vdouble(19.9999,99999),
                 ## flags and conditions required at the denominator,
             ),
             BinToPDFmap = cms.vstring(
